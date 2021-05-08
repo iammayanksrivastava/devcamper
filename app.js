@@ -9,8 +9,11 @@ const mongoose     = require('mongoose');
 const logger       = require('morgan');
 const path         = require('path');
 const bootcamps    = require('./routes/routeBootcamps')
+const courses      = require('./routes/routeCourses')
 const customLog    = require('./middleware/logger')
 const errorHandler = require('./middleware/error')
+const fileupload   = require('express-fileupload')
+
 mongoose
   .connect('mongodb://localhost/devcamper', {useNewUrlParser: true})
   .then(x => {
@@ -31,9 +34,14 @@ app.use(logger('dev'));
 app.use(bodyParser.json());
 app.use(bodyParser.urlencoded({ extended: false }));
 app.use(cookieParser());
+app.use(fileupload())
+
+app.use(express.static(path.join(__dirname, 'public')))
 
 //Mount Routes 
 app.use('/api/v1/bootcamps', bootcamps)
+app.use('/api/v1/courses', courses)
+
 
 app.use(errorHandler)
 
