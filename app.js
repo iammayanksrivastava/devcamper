@@ -10,9 +10,11 @@ const logger       = require('morgan');
 const path         = require('path');
 const bootcamps    = require('./routes/routeBootcamps')
 const courses      = require('./routes/routeCourses')
+const auth     = require('./routes/routeAuth')
 const customLog    = require('./middleware/logger')
 const errorHandler = require('./middleware/error')
 const fileupload   = require('express-fileupload')
+
 
 mongoose
   .connect('mongodb://localhost/devcamper', {useNewUrlParser: true})
@@ -41,7 +43,7 @@ app.use(express.static(path.join(__dirname, 'public')))
 //Mount Routes 
 app.use('/api/v1/bootcamps', bootcamps)
 app.use('/api/v1/courses', courses)
-
+app.use('/api/v1/auth', auth)
 
 app.use(errorHandler)
 

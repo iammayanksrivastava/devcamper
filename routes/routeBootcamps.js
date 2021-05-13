@@ -4,6 +4,9 @@ const router = express.Router();
 
 const courseRouter = require ('./routeCourses')
 
+const {protect, authorize} = require('../middleware/auth')
+
+
 const {
   getBootcamp,
   getBootcamps,
@@ -26,17 +29,17 @@ router
 router
   .route('/')
   .get(advancedResults(Bootcamp,'courses'), getBootcamps)
-  .post(createBootcamp); 
+  .post(protect,authorize('publisher', 'admin'), createBootcamp); 
 
 router
   .route('/:id')
   .get(getBootcamp)
-  .put(updateBootcamp)
-  .delete(deleteBootcamp)
+  .put(protect,authorize('publisher', 'admin'),updateBootcamp)
+  .delete(protect,authorize('publisher', 'admin'),deleteBootcamp)
   
-
+//Upload a photo
 router
-  .route('/:id/photo').put(uploadPhotoBootcamp); 
+  .route('/:id/photo').put(protect, authorize('publisher', 'admin'),uploadPhotoBootcamp); 
 
 
   
