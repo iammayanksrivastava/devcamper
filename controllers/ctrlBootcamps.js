@@ -2,18 +2,15 @@ const Bootcamp = require("../models/Bootcamp");
 const ErrorResponse = require("../utils/errorResponse");
 const asyncHandler = require("../middleware/async");
 const geocoder = require("../utils/geocoder");
-const path = require('path')
+const path = require("path");
 
 //@desc         Get all Bootcamps
 //@route        GET /api/v1/bootcamps
 //@access       Public
 
 exports.getBootcamps = asyncHandler(async (req, res, next) => {
-  res
-    .status(200)
-    .json(res.advancedResults)
-  })
-  
+  res.status(200).json(res.advancedResults);
+});
 
 //@desc         Get  Bootcamp
 //@route        GET /api/v1/bootcamps/:id
@@ -34,6 +31,20 @@ exports.getBootcamp = asyncHandler(async (req, res, next) => {
 //@access       Private
 
 exports.createBootcamp = asyncHandler(async (req, res, next) => {
+  //Add user to req.body
+  req.body.user = req.user;
+  //Check for published boorcamp
+
+  publishedBootcamp = await Bootcamp.findOne({ user: req.user.id });
+
+  if (publishedBootcamp && req.user.role !== "admin") {
+    return next(
+      new ErrorResponse(
+        `The user with id ${req.user.id} has already publihsed a bootcamp`,
+        400
+      )
+    );
+  }
   const bootcamp = await Bootcamp.create(req.body);
   res.status(201).json({
     success: true,
@@ -46,10 +57,7 @@ exports.createBootcamp = asyncHandler(async (req, res, next) => {
 //@access       Public
 
 exports.updateBootcamp = asyncHandler(async (req, res, next) => {
-  const bootcamp = await Bootcamp.findByIdAndUpdate(req.params.id, req.body, {
-    new: true,
-    runValidators: true,
-  });
+  let bootcamp = await Bootcamp.findById(req.params.id);
 
   if (!bootcamp) {
     return next(
@@ -57,6 +65,21 @@ exports.updateBootcamp = asyncHandler(async (req, res, next) => {
     );
   }
 
+  //make sure the bootcamp is updated by owner
+
+  if (bootcamp.user.toString() !== req.user.id && req.user.role !== "admin") {
+    return next(
+      new ErrorResponse(
+        `User not allowed to update Bootcamp`,
+        401
+      )
+    );
+  }
+
+  bootcamp = await Bootcamp.findByIdAndUpdate(req.params.id, req.body, {
+    new: true,
+    runValidators: true,
+  });
   res.status(200).json({ success: true, data: bootcamp });
 });
 
@@ -70,6 +93,17 @@ exports.deleteBootcamp = asyncHandler(async (req, res, next) => {
   if (!bootcamp) {
     return next(
       new ErrorResponse(`Resource not found with id ${req.params.id}`, 404)
+    );
+  }
+
+  //make sure the bootcamp is deleted by owner
+
+  if (bootcamp.user.toString() !== req.user.id && req.user.role !== "admin") {
+    return next(
+      new ErrorResponse(
+        `User not allowed to delete Bootcamp`,
+        401
+      )
     );
   }
 
@@ -117,6 +151,18 @@ exports.uploadPhotoBootcamp = asyncHandler(async (req, res, next) => {
     );
   }
 
+  //make sure the bootcamp is updated by owner
+
+  if (bootcamp.user.toString() !== req.user.id && req.user.role !== "admin") {
+    return next(
+      new ErrorResponse(
+        `User not allowed to update Bootcamp`,
+        401
+      )
+    );
+  }
+
+
   if (!req.files) {
     return next(new ErrorResponse(`Please upload a file`, 404));
   }
@@ -130,21 +176,19 @@ exports.uploadPhotoBootcamp = asyncHandler(async (req, res, next) => {
     return next(new ErrorResponse(`Please upload a smaller image`, 400));
   }
 
-  file.name = `photo_${bootcamp._id}${path.parse(file.name).ext}`
+  file.name = `photo_${bootcamp._id}${path.parse(file.name).ext}`;
 
-  file.mv(`${process.env.FILE_UPLOAD_PATH}/${file.name}`, async err => {
-    if(err) {
-      console.log(err)
+  file.mv(`${process.env.FILE_UPLOAD_PATH}/${file.name}`, async (err) => {
+    if (err) {
+      console.log(err);
       return next(new ErrorResponse(`Problem with file upload`, 500));
     }
 
-    await Bootcamp.findByIdAndUpdate(req.params.id, {photo: file.name})
+    await Bootcamp.findByIdAndUpdate(req.params.id, { photo: file.name });
 
     res.status(200).json({
       sucess: true,
-      data: file.name
-    })
-  })
-  
-
+      data: file.name,
+    });
+  });
 });
