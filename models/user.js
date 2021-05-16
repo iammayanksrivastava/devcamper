@@ -1,8 +1,7 @@
 const mongoose = require("mongoose");
-
-const bcrypt = require("bcryptjs")
-
-const jwt = require("jsonwebtoken")
+const bcrypt = require("bcryptjs");
+const jwt = require("jsonwebtoken");
+const crypto = require("crypto");
 
 const UserSchema = new mongoose.Schema({
   name: {
@@ -50,21 +49,49 @@ const UserSchema = new mongoose.Schema({
 
 //Encrypt password
 
-UserSchema.pre('save', async function(next){
-  const salt = await bcrypt.genSalt(10); 
-  this.password = await bcrypt.hash(this.password, salt)
+UserSchema.pre("save", async function (next) {
 
-}); 
+  if(!this.isModified('password')){
+    next()
+  }
+  
+  const salt = await bcrypt.genSalt(10);
+  this.password = await bcrypt.hash(this.password, salt);
+});
 
-UserSchema.methods.getSignedJwtToken = function() {
-  return jwt.sign({id: this._id}, process.env.JWT_SECRET, {expiresIn: process.env.JWT_EXPIRE})
-}
+UserSchema.methods.getSignedJwtToken = function () {
+  return jwt.sign({ id: this._id }, process.env.JWT_SECRET, {
+    expiresIn: process.env.JWT_EXPIRE,
+  });
+};
 
+//Match user entered password to hashed password
 
-//Match user entered password to hashed password 
+UserSchema.methods.comparePassword = async function (enteredPassword) {
+  return await bcrypt.compare(enteredPassword, this.password);
+};
 
-UserSchema.methods.comparePassword = async function(enteredPassword) {
-  return await bcrypt.compare (enteredPassword, this.password)
-}
+//Generate and hash password token
 
-module.exports = mongoose.model('User', UserSchema)
+UserSchema.methods.getResetPasswordToken = function () {
+  //Generate the token
+
+  const resetToken = crypto.randomBytes(20).toString("hex");
+
+  //hash The token and set to resetPasswordToken field
+
+  this.resetPasswordToken = crypto
+    .createHash("sha256")
+    .update(resetToken)
+    .digest("hex");
+
+  //Set Expire
+
+  this.resetPasswordExpire = Date.now() + 10 * 60 * 1000;
+
+  return resetToken;
+
+  console.log(resetToken);
+};
+
+module.exports = mongoose.model("User", UserSchema);
