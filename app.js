@@ -10,13 +10,17 @@ const logger       = require('morgan');
 const path         = require('path');
 const bootcamps    = require('./routes/routeBootcamps')
 const courses      = require('./routes/routeCourses')
-const auth     = require('./routes/routeAuth')
+const auth         = require('./routes/routeAuth')
 const customLog    = require('./middleware/logger')
 const errorHandler = require('./middleware/error')
 const fileupload   = require('express-fileupload')
 const reviews      = require('./routes/routeReview')
-
-
+const sanitize     = require('express-mongo-sanitize')
+const helmet       = require("helmet");
+const xss          = require("xss-clean")
+const hpp          = require("hpp")
+const ratelimit    = require("express-rate-limit")
+const cors         = require("cors")
 
 mongoose
   .connect('mongodb://localhost/devcamper', {useNewUrlParser: true})
@@ -39,6 +43,21 @@ app.use(bodyParser.json());
 app.use(bodyParser.urlencoded({ extended: false }));
 app.use(cookieParser());
 app.use(fileupload())
+app.use(sanitize());
+app.use(helmet());
+app.use(xss());
+app.use(hpp());
+app.use(cors()) 
+
+
+//Express Rate Limit
+const limiter = ratelimit({
+  windowMs: 10 * 60 * 1000, // 10 minutes
+  max: 100 // limit each IP to 100 requests per windowMs
+});
+
+app.use(limiter); 
+
 
 app.use(express.static(path.join(__dirname, 'public')))
 
